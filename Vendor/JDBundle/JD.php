@@ -8,7 +8,6 @@ use Vendor\JDBundle\libraries\RSAUtils;
 use Vendor\JDBundle\libraries\SignUtil;
 use Vendor\JDBundle\libraries\DesUtils;
 use Vendor\JDBundle\libraries\TDESUtil;
-use Vendor\OrderSeniorBundle\OrderSenior;
 use Vendor\RequestBundle\Request;
 use Vendor\JDBundle\libraries\HttpUtils;
 
