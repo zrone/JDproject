@@ -49,6 +49,9 @@ $data = array(
  * constraint `fk_userid` foreign key(`userid`) references user(`id`) on update cascade on delete cascade
  * ) ENGINE=INNODB default charset=utf8;
  **/
+
+// JD支付退款
 //echo $JD::refundHandle( $data );
 
+// JD支付支付
 echo $JD::payHandle( $data );
