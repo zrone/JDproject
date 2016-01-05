@@ -10,6 +10,7 @@
 
 use Vendor\JDBundle\JD;
 use Vendor\JDBundle\libraries\Cache;
+use Vendor\OrderSeniorBundle\OrderSenior;
 
 require_once( "zroneFrameWork.loader.php" );
 
@@ -29,7 +30,7 @@ $JD = new JD( array(
 $data = array(
 	'merchantRemark'   => '还是哇哈哈好喝',
 	'tradeAmount'      => 1,
-	'tradeNum'         => \Vendor\OrderSeniorBundle\OrderSenior::getOrderSn(),
+	'tradeNum'         => OrderSenior::getOrderSn(),
 	'tradeDescription' => '我玩玩',
 	'tradeName'        => '可口可乐',
 	'token'            => ''
