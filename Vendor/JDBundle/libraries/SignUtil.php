@@ -8,19 +8,24 @@ use Vendor\JDBundle\libraries\LogUtil;
 class SignUtil
 {
 
-	public static $unSignKeyList = array(
+	public static $unSignKeyListForWeb = array(
 		"merchantSign",
 		"version",
-		"successCallbackUrl",
-		"forPayLayerUrl"
+		"successCallbackUrl"
+	);
+
+	public static $unSignKeyListForWap = array(
+		"merchantSign",
+		"version",
+		"token"
 	);
 
 	public static function signWithoutToHex( $params )
 	{
 		ksort( $params );
-		$sourceSignString = SignUtil::signString( $params, SignUtil::$unSignKeyList );
+		$sourceSignString = SignUtil::signString( $params, SignUtil::$unSignKeyListForWeb );
 
-		LogUtil::log( PHP_EOL . date( "Y-m-d H:i:s", $_SERVER[ 'REQUEST_TIME' ] ) . $sourceSignString . PHP_EOL, LogUtil::OTHER );
+		LogUtil::log( PHP_EOL . date( "Y-m-d H:i:s", $_SERVER[ 'REQUEST_TIME' ] ) . PHP_EOL . $sourceSignString . PHP_EOL, LogUtil::OTHER );
 
 		$sha256SourceSignString = hash( "sha256", $sourceSignString, TRUE );
 
@@ -32,7 +37,7 @@ class SignUtil
 	public static function sign( $params )
 	{
 		ksort( $params );
-		$sourceSignString = SignUtil::signString( $params, SignUtil::$unSignKeyList );
+		$sourceSignString = SignUtil::signString( $params, SignUtil::$unSignKeyListForWap );
 
 		LogUtil::log( $sourceSignString, LogUtil::OTHER );
 

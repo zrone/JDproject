@@ -29,7 +29,11 @@ class JD
 	public static $_refund_asyn_url = ""; // 退款异步回调URL
 	public static $_fail_pay_syn_url = ""; // 支付失败通知URL
 
+	public static $_source_client = "web";
+
 	public static $_serverPayUrl = 'https://plus.jdpay.com/nPay.htm'; // 支付提交URL
+	public static $_serverWapPayUrl = 'https://m.wangyin.com/wepay/web/pay'; // 支付提交URL
+
 	public static $_serverRefundUrl = 'https://m.jdpay.com/wepay/refund'; //申请退款URL
 
 	public function __construct( $config = array() )
@@ -42,6 +46,7 @@ class JD
 		self::$_fail_pay_syn_url = trim( trim( isset( $config[ 'fsynchronous' ] ) ? $config[ 'fsynchronous' ] : "" ) );
 		self::$_pay_asyn_url = trim( trim( isset( $config[ 'synchronous' ] ) ? $config[ 'synchronous' ] : "" ) );
 		self::$_refund_asyn_url = trim( trim( isset( $config[ 'rsynchronous' ] ) ? $config[ 'synchronous' ] : "" ) );
+		self::$_source_client = trim( trim( isset( $config[ 'source_client' ] ) ? $config[ 'source_client' ] : "web" ) );
 	}
 
 	/**
@@ -53,7 +58,11 @@ class JD
 	 */
 	public static function payHandle( array $formData )
 	{
-		$data = self::filterPayFormData( $formData );
+		if( self::$_source_client == "web" ) {
+			$data = self::filterWebPayFormData( $formData );
+		} else {
+			$data = self::filterWapPayFormData( $formData );
+		}
 
 		return self::formPaySubmit( $data );
 	}
@@ -226,7 +235,11 @@ class JD
 	 */
 	public static function formPaySubmit( array $data )
 	{
-		$data[ 'serverPayUrl' ] = self::$_serverPayUrl;
+		if( self::$_source_client == 'web' ) {
+			$data[ 'serverPayUrl' ] = self::$_serverPayUrl;
+		} else {
+			$data[ 'serverPayUrl' ] = self::$_serverWapPayUrl;
+		}
 
 		$formHtml = <<<eof
 <!DOCTYPE html>
@@ -250,8 +263,14 @@ class JD
         <input type='hidden' name='currency' value="{$data['currency']}" />
         <input type='hidden' name='notifyUrl' value="{$data['notifyUrl']}" />
         <input type='hidden' name='successCallbackUrl' value="{$data['successCallbackUrl']}" />
-        <input type='hidden' name='ip' value="{$data['ip']}" />
+        <input type='hidden' name='failCallbackUrl' value="{$data['failCallbackUrl']}" />
 eof;
+
+		if( self::$_source_client == "web" ) {
+			$formHtml .= <<<eof
+		<input type='hidden' name='ip' value="{$data['ip']}" />
+eof;
+		}
 
 		if( isset( $data[ 'specifyInfoJson' ] ) ) {
 			$formHtml .= <<<eof
@@ -279,16 +298,18 @@ eof;
 	 *
 	 * @return array
 	 */
-	public static function filterPayFormData( array $formData )
+	public static function filterWebPayFormData( array $formData )
 	{
 		$param = array();
 
 		$param[ "currency" ] = 'CNY'; // 交易币种
+
 		$param[ "ip" ] = ClientIP::getIp();
 		$param[ 'merchantNum' ] = self::$_merchant; // 商户号
 		$param[ "merchantRemark" ] = isset( $formData[ "merchantRemark" ] ) ? $formData[ "merchantRemark" ] : ""; // 请输入商户备注
 		$param[ "notifyUrl" ] = self::$_pay_syn_url;
 		$param[ "successCallbackUrl" ] = self::$_pay_asyn_url;
+		$param[ "failCallbackUrl" ] = self::$_fail_pay_syn_url;
 		$param[ "tradeAmount" ] = isset( $formData[ "tradeAmount" ] ) ? $formData[ "tradeAmount" ] : 0; // 交易金额
 		$param[ "tradeDescription" ] = isset( $formData[ "tradeDescription" ] ) ? $formData[ "tradeDescription" ] : ""; // 交易描述
 		$param[ "tradeName" ] = isset( $formData[ "tradeName" ] ) ? $formData[ "tradeName" ] : ""; // 商品名称
@@ -309,6 +330,64 @@ eof;
 		}
 
 		$param[ "merchantSign" ] = SignUtil::signWithoutToHex( $param );
+
+		return $param;
+	}
+
+	/**
+	 * 封装支付表单参数
+	 *
+	 * @param array $formData
+	 *
+	 * @return array
+	 */
+	public static function filterWapPayFormData( array $formData )
+	{
+		$param = array();
+
+		$param[ "currency" ] = 'CNY'; // 交易币种
+		$param[ 'merchantNum' ] = self::$_merchant; // 商户号
+		$param[ "merchantRemark" ] = isset( $formData[ "merchantRemark" ] ) ? $formData[ "merchantRemark" ] : ""; // 请输入商户备注
+		$param[ "notifyUrl" ] = self::$_pay_syn_url;
+		$param[ "successCallbackUrl" ] = self::$_pay_asyn_url;
+		$param[ "failCallbackUrl" ] = self::$_fail_pay_syn_url;
+		$param[ "tradeAmount" ] = isset( $formData[ "tradeAmount" ] ) ? $formData[ "tradeAmount" ] : 0; // 交易金额
+		$param[ "tradeDescription" ] = isset( $formData[ "tradeDescription" ] ) ? $formData[ "tradeDescription" ] : ""; // 交易描述
+		$param[ "tradeName" ] = isset( $formData[ "tradeName" ] ) ? $formData[ "tradeName" ] : ""; // 商品名称
+		$param[ "tradeNum" ] = isset( $formData[ "tradeNum" ] ) ? $formData[ "tradeNum" ] : ""; // 用户订单号
+		$param[ "tradeTime" ] = date( 'Y-m-d H:i:s', $_SERVER[ 'REQUEST_TIME' ] );
+		$param[ "version" ] = '3.0';
+		$param[ "token" ] = isset( $formData[ "token" ] ) ? $formData[ "token" ] : ""; // 用户交易令牌 记录用户身份的标识
+
+		$deUtils = new DesUtils();
+
+		if( isset( $formData[ "specBankCardNo" ] ) && !empty( $formData[ "specBankCardNo" ] ) && isset( $formData[ "specIdCard" ] ) && !empty( $formData[ "specIdCard" ] ) && isset( $formData[ "specName" ] ) && !empty( $formData[ "specName" ] ) ) {
+			// 卡前置不为空
+			$specialJson = array();
+
+			$specialJson[ "specBankCardNo" ] = isset( $formData[ "specBankCardNo" ] ) ? $formData[ "specBankCardNo" ] : ""; // 卡号
+			$specialJson[ "specIdCard" ] = isset( $formData[ "specIdCard" ] ) ? $formData[ "specIdCard" ] : ""; // 身份证号
+			$specialJson[ "specName" ] = isset( $formData[ "specName" ] ) ? $formData[ "specName" ] : ""; // 姓名
+
+			$param[ "specifyInfoJson" ] = json_encode( $specialJson );
+		}
+
+		$param[ "merchantSign" ] = SignUtil::sign( $param );
+
+		$param[ "merchantRemark" ] = $deUtils->encrypt( $param[ "merchantRemark" ], self::$_DES );
+		$param[ "tradeNum" ] = $deUtils->encrypt( $param[ "tradeNum" ], self::$_DES );
+		$param[ "tradeName" ] = $deUtils->encrypt( $param[ "tradeName" ], self::$_DES );
+		$param[ "tradeDescription" ] = $deUtils->encrypt( $param[ "tradeDescription" ], self::$_DES );
+		$param[ "tradeTime" ] = $deUtils->encrypt( $param[ "tradeTime" ], self::$_DES );
+		$param[ "tradeAmount" ] = $deUtils->encrypt( $param[ "tradeAmount" ], self::$_DES );
+		$param[ "currency" ] = $deUtils->encrypt( $param[ "currency" ], self::$_DES );
+		$param[ "notifyUrl" ] = $deUtils->encrypt( $param[ "notifyUrl" ], self::$_DES );
+		$param[ "successCallbackUrl" ] = $deUtils->encrypt( $param[ "successCallbackUrl" ], self::$_DES );
+		$param[ "failCallbackUrl" ] = $deUtils->encrypt( $param[ "failCallbackUrl" ], self::$_DES );
+
+		if( isset( $formData[ "specBankCardNo" ] ) && !empty( $formData[ "specBankCardNo" ] ) && isset( $formData[ "specIdCard" ] ) && !empty( $formData[ "specIdCard" ] ) && isset( $formData[ "specName" ] ) && !empty( $formData[ "specName" ] ) ) {
+			$param[ "specifyInfoJson" ] = $deUtils->encrypt( $param[ "specifyInfoJson" ], self::$_DES );
+		}
 
 		return $param;
 	}

@@ -18,13 +18,15 @@ Cache::noCache();
 
 
 $JD = new JD( array(
-	'merchant'     => '22294531',
-	'des'          => 'ta4E/aspLA3lgFGKmNDNRYU92RkZ4w2t',
-	'certType'     => 'RSA',
-	'md5_key'      => 'test',
-	'asynchronous' => 'http://www.baidu.com',
-	'synchronous'  => 'http://www.baidu.com',
-	'rsynchronous' => ''
+	'merchant'      => '22294531',
+	'des'           => 'ta4E/aspLA3lgFGKmNDNRYU92RkZ4w2t',
+	'certType'      => 'RSA',
+	'md5_key'       => 'test',
+	'asynchronous'  => 'http://www.baidu.com',
+	'synchronous'   => 'http://www.baidu.com',
+	'rsynchronous'  => '',
+	'fsynchronous'  => 'http://www.baidu.com',
+	'source_client' => 'wap'
 ) );
 
 $data = array(
